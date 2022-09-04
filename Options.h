@@ -7,8 +7,9 @@ struct GameConfiguration
     int screenWidth;
     int screenHeight;
     bool fullscreen;
-    bool useSprites;
     std::string title;
+    std::string blockCharset;
+    std::string wordListFile;
 };
 
 enum GameResolution

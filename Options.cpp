@@ -2,9 +2,22 @@
 #include "Menu.h"
 
 Options::Options(const Menu *parentMenu)
-: mParentMenu(parentMenu), mGameConfiguration{1024, 768, false, true, "JWordTetris"}
-, comboItems{"800x600", "1024x768", "1280x720", "1440x900", "1600x900", "1920x1080", "2560x1440"}
+:
+mParentMenu(parentMenu)
 {
+    mGameConfiguration.screenWidth = 1024;
+    mGameConfiguration.screenHeight = 768;
+    mGameConfiguration.fullscreen = false;
+    mGameConfiguration.title = "JWordTetris";
+    mGameConfiguration.blockCharset = "AABCDEEFGHIIJKLMNOOPQRSTUUVWXYZ"; // More vowels for easier game
+
+    comboItems[0] = "800x600";
+    comboItems[1] = "1024x768";
+    comboItems[2] = "1280x720";
+    comboItems[3] = "1440x900";
+    comboItems[4] = "1600x900";
+    comboItems[5] = "1920x1080";
+    comboItems[6] = "2560x1440";
 }
 
 void Options::Draw()
@@ -21,7 +34,23 @@ void Options::Draw()
 
     ImGui::Combo("Resolution", &mSelectedResolution, comboItems, IM_ARRAYSIZE(comboItems));
     ImGui::Checkbox("Fullscreen", &mGameConfiguration.fullscreen);
-    ImGui::Checkbox("Use Sprites", &mGameConfiguration.useSprites);
+
+    const char* items[] = { "../Assets/WordList.txt", "../Assets/WordListBig.txt" };
+    static int item_current_idx = 0;
+    if (ImGui::BeginListBox("Word list"))
+    {
+        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
+        {
+            const bool is_selected = (item_current_idx == n);
+            if (ImGui::Selectable(items[n], is_selected))
+                item_current_idx = n;
+
+            if (is_selected)
+                mGameConfiguration.wordListFile = items[item_current_idx];
+        }
+        ImGui::EndListBox();
+    }
+
     if (ImGui::Button("Exit Options", ImVec2(parentWidth  / 4.0, 50)))
         isShowed = false;
 

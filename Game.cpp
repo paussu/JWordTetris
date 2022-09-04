@@ -10,7 +10,10 @@ Game::Game(const GameConfiguration* config)
 mConfiguration(config),
 mGameMap(mMapWidth, std::vector<Block>(mMapHeight, {WALL, SDL_Color{255, 255, 255, 255}, '?'}))
 {
+    SDL_assert(config);
+
     mBlockSize = mConfiguration->screenWidth / 64;
+    characterDistribution = std::uniform_int_distribution<std::mt19937::result_type>(0, mConfiguration->blockCharset.size() - 1);
 }
 
 bool Game::Initialize()
@@ -22,7 +25,7 @@ bool Game::Initialize()
         return false;
     }
 
-    window = SDL_CreateWindow("JWordTetris", 100, 100, mConfiguration->screenWidth, mConfiguration->screenHeight, 0);
+    window = SDL_CreateWindow(mConfiguration->title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, mConfiguration->screenWidth, mConfiguration->screenHeight, 0);
 
     if (!window)
     {
@@ -54,8 +57,6 @@ bool Game::Initialize()
         SDL_Log("Failed to open font\n");
         return false;
     }
-
-    ScoreText = "SCORE: ";
 
     std::ifstream wordFile;
     std::string line;
@@ -251,6 +252,11 @@ void Game::UpdateBlocks()
     {
         for(int x = 2; x < mMapWidth - 2; x++)
         {
+            if(mGameMap[x][y].Type == DROPPED && mGameMap[x][y + 1].Type == EMPTY)
+            {
+                std::swap(mGameMap[x][y + 1], mGameMap[x][y]);
+                return;
+            }
             if(mGameMap[x][2].Type == DROPPED)
             {
                 RestartGame();
@@ -407,8 +413,5 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
 
 char Game::GetRandomCharacter()
 {
-    constexpr char charset[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-    return charset[characterDistribution(mRandomNumberGenerator)];
+    return mConfiguration->blockCharset[characterDistribution(mRandomNumberGenerator)];
 }

@@ -98,7 +98,7 @@ bool Menu::LoadMenu()
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags windowFlags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
-    mWindow = SDL_CreateWindow(mOptions->GetGameConfiguration().title.c_str(), 100, 100, mWidth, mHeight,
+    mWindow = SDL_CreateWindow(mOptions->GetGameConfiguration().title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, mWidth, mHeight,
                                windowFlags);
 
     if(!mWindow)

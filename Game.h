@@ -69,7 +69,7 @@ private:
 
     std::random_device mRandomDevice;
     std::mt19937 mRandomNumberGenerator {mRandomDevice()};
-    std::uniform_int_distribution<std::mt19937::result_type> characterDistribution {0, 25};
+    std::uniform_int_distribution<std::mt19937::result_type> characterDistribution;
 
     std::vector<std::vector<Block>> mGameMap;
     std::unique_ptr<Block> mBlock;
