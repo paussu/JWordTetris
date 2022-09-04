@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.15)
-project(WordTetris)
+project(JWordTetris)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(OPENGL_INCLUDE_DIR)
-include_directories(GLEW_INCLUDE_DIR)
+find_package(glfw3 REQUIRED)
+find_package(glm REQUIRED)
+find_package(OpenGL REQUIRED)
+
 include_directories(SDL2_INCLUDE_DIR)
+include_directories(SDL2_TTF_INCLUDE_DIR)
 
-add_executable(WordTetris main.cpp Game.cpp Game.h Menu.cpp Menu.h nuklear.h nuklear_sdl_gl3.h Block.cpp Block.h)
+FILE(GLOB JWordTetris_Headers *.h)
+FILE(GLOB JWordTetris_Sources *.cpp)
 
-target_link_libraries(WordTetris SDL2 SDL2_ttf GL GLU GLEW)
+file(GLOB ImGui_Headers ImGui/*.h)
+file(GLOB ImGui_Sources ImGui/*.cpp)
+
+add_executable(JWordTetris ${ImGui_Headers} ${ImGui_Sources} ${JWordTetris_Headers} ${JWordTetris_Sources})
+
+target_link_libraries(JWordTetris PRIVATE glfw glm::glm OpenGL SDL2 SDL2_ttf)

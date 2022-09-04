@@ -9,11 +9,13 @@
 
 #include "Block.h"
 
+struct GameConfiguration;
+
 class Game
 {
 public:
 
-    Game(int width, int height);
+    Game(const GameConfiguration* config);
 
     bool Initialize();
     void Run();
@@ -33,8 +35,9 @@ private:
     char GetRandomCharacter();
     bool UpdatePosition(int x, int y);
     std::vector<Vector2> CheckForWords(int x, int y);
-
     void RenderText(std::string_view text, int x, int y, int w, int h);
+
+    const GameConfiguration* mConfiguration {nullptr};
     SDL_Window* window;
     SDL_Renderer* renderer;
     TTF_Font* mFont;
@@ -49,7 +52,6 @@ private:
     const int mMapHeight {30};
     const int mBlockGap {1};
 
-    int mWidth, mHeight;
     int mBlockSize;
     int mDropSpeed {500};
     int mScore {0};
@@ -67,7 +69,6 @@ private:
 
     std::random_device mRandomDevice;
     std::mt19937 mRandomNumberGenerator {mRandomDevice()};
-    std::uniform_int_distribution<std::mt19937::result_type> numberDistribution {0, 6};
     std::uniform_int_distribution<std::mt19937::result_type> characterDistribution {0, 25};
 
     std::vector<std::vector<Block>> mGameMap;

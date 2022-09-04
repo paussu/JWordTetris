@@ -1,16 +1,16 @@
 #include "Game.h"
+#include "Options.h"
 
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 
-Game::Game(int width, int height)
+Game::Game(const GameConfiguration* config)
 :
-mWidth(width),
-mHeight(height),
+mConfiguration(config),
 mGameMap(mMapWidth, std::vector<Block>(mMapHeight, {WALL, SDL_Color{255, 255, 255, 255}, '?'}))
 {
-    mBlockSize = mWidth / 64;
+    mBlockSize = mConfiguration->screenWidth / 64;
 }
 
 bool Game::Initialize()
@@ -22,7 +22,7 @@ bool Game::Initialize()
         return false;
     }
 
-    window = SDL_CreateWindow("JWordTetris", 100, 100, mWidth, mHeight, 0);
+    window = SDL_CreateWindow("JWordTetris", 100, 100, mConfiguration->screenWidth, mConfiguration->screenHeight, 0);
 
     if (!window)
     {
@@ -198,20 +198,20 @@ void Game::GenerateOutput()
     }
     if(!hideInfo)
     {
-        RenderText("Use wasd or arrow keys for movement", mWidth / 2 + 40, mHeight - (mHeight / 2) ,
-                mWidth / 3 + 120, mHeight / 16);
-        RenderText("Press p to pause game", mWidth / 2 + 40, mHeight - (mHeight / 3) ,
-                mWidth / 3 + 20, mHeight / 16);
-        RenderText("Press enter to start game", mWidth / 2 + 40, mHeight - (mHeight / 4) ,
-                mWidth / 3 + 20, mHeight / 16);
+        RenderText("Use wasd or arrow keys for movement", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 2) ,
+                mConfiguration->screenWidth / 3 + 120, mConfiguration->screenHeight / 16);
+        RenderText("Press p to pause game", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 3) ,
+                mConfiguration->screenWidth / 3 + 20, mConfiguration->screenHeight / 16);
+        RenderText("Press enter to start game", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 4) ,
+                mConfiguration->screenWidth / 3 + 20, mConfiguration->screenHeight / 16);
     }
 
     ScoreText = "SCORE: " + std::to_string(mScore);
     LevelText = "Level: " + std::to_string(mLevel);
     LinesText = "Words: " + std::to_string(mWordCount);
-    RenderText(ScoreText.c_str(), mWidth / 2 + 40, 100 , mWidth / 4, mHeight / 20);
-    RenderText(LinesText.c_str(), mWidth / 2 + 40, 200 , mWidth / 4, mHeight / 20);
-    RenderText(LevelText.c_str(), mWidth / 2 + 40, 300 , mWidth / 4, mHeight / 20);
+    RenderText(ScoreText.c_str(), mConfiguration->screenWidth / 2 + 40, 100 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
+    RenderText(LinesText.c_str(), mConfiguration->screenWidth / 2 + 40, 200 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
+    RenderText(LevelText.c_str(), mConfiguration->screenWidth / 2 + 40, 300 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
     SDL_RenderPresent(renderer);
 }
 

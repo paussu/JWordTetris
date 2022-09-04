@@ -7,35 +7,41 @@
 #include <vector>
 #include "Game.h"
 
+#include "ImGui/imgui.h"
+
 struct ResolutionChoice
 {
     std::string title;
     int w, h;
 };
 
+class Options;
+
 class Menu
 {
 public:
     Menu();
+    ~Menu();
+
     bool Initialize();
-
     void RunLoop();
-
     void Shutdown();
+
+    int GetWidth() const;
+    int GetHeight() const;
 private:
     void ProcessInput();
+    void GenerateOutput();
     bool LoadMenu();
     void UnloadMenu();
     void DrawMenu();
-    void DrawOptions();
 
     SDL_Window* mWindow;
     SDL_Renderer* mRenderer;
+    SDL_GLContext glContext;
 
     bool mIsRunning;
-    bool mGameStart;
-    bool mOptions;
-    bool mNetworkOptions;
+    bool mGameStart = false;
 
     Uint32 mTicksCount;
     int mWidth;
@@ -43,12 +49,12 @@ private:
 
     bool debug = true;
 
-    TTF_Font* menutFont;
-    struct nk_context *ctx;
-    SDL_GLContext glContext;
     int mButtonWidth;
     int mButtonHeight;
 
+    ImVec4 clearColor;
     int i, selected_resolution;
     std::vector<ResolutionChoice> resolutions;
+
+    std::unique_ptr<Options> mOptions;
 };
