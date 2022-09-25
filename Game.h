@@ -2,10 +2,14 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
-#include <vector>
 #include <bits/unique_ptr.h>
-#include <random>
 #include <cmath>
+
+#include <random>
+#include <vector>
+#include <deque>
+#include <string>
+#include <memory>
 
 #include "Block.h"
 
@@ -13,18 +17,17 @@ struct GameConfiguration;
 
 class Game
 {
-public:
-
-    Game(const GameConfiguration* config);
+ public:
+    explicit Game(const GameConfiguration* config);
 
     bool Initialize();
     void Run();
     void Shutdown();
 
-private:
+ private:
     void ProcessInput();
     void UpdateGame();
-    void GenerateOutput();
+    void GenerateOutput() const;
     void RestartGame();
 
     void AddScore(int wordLength);
@@ -35,11 +38,14 @@ private:
     char GetRandomCharacter();
     bool UpdatePosition(int x, int y);
     std::vector<Vector2> CheckForWords(int x, int y);
-    void RenderText(std::string_view text, int x, int y, int w, int h);
+    void RenderText(std::string_view text, int x, int y, int w, int h) const;
+    void DrawWordList() const;
+
+    void DrawDebugStuff() const;
 
     const GameConfiguration* mConfiguration {nullptr};
     SDL_Window* window;
-    SDL_Renderer* renderer;
+    SDL_Renderer* mRenderer;
     TTF_Font* mFont;
 
     bool isRunning {true};
@@ -58,7 +64,6 @@ private:
     int mWordCount {0};
     int mLevel {1};
 
-    std::string ScoreText;
     std::string LevelText;
     std::string LinesText;
     std::vector<std::string> mWordList;
@@ -73,5 +78,7 @@ private:
 
     std::vector<std::vector<Block>> mGameMap;
     std::unique_ptr<Block> mBlock;
+
+    std::deque<std::string> mWordsFound;
 };
 

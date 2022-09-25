@@ -22,7 +22,7 @@ bool Menu::Initialize()
     mWidth = 1024;
     mHeight = 768;
 
-    if(!LoadMenu()) 
+    if(!LoadMenu())
         return false;
 
     mIsRunning = true;
@@ -50,17 +50,17 @@ void Menu::Shutdown()
 
 void Menu::RunLoop()
 {
-    while(mIsRunning)
+    while (mIsRunning)
     {
         ProcessInput();
 
-        if(mGameStart)
+        if (mGameStart)
         {
             UnloadMenu();
             auto game = std::make_unique<Game>(&mOptions->GetGameConfiguration());
             bool success = game->Initialize();
 
-            if(success)
+            if (success)
             {
                 game->Run();
             }
@@ -79,7 +79,7 @@ bool Menu::LoadMenu()
     SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 
     int sdlResult = SDL_Init(SDL_INIT_VIDEO|SDL_INIT_TIMER|SDL_INIT_EVENTS);
-    if(sdlResult != 0)
+    if (sdlResult != 0)
     {
         SDL_Log("Unable to initialize SDL! Error was: %s", SDL_GetError());
         return false;
@@ -101,7 +101,7 @@ bool Menu::LoadMenu()
     mWindow = SDL_CreateWindow(mOptions->GetGameConfiguration().title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, mWidth, mHeight,
                                windowFlags);
 
-    if(!mWindow)
+    if (!mWindow)
     {
         SDL_Log("Unable to create window! Error was %s", SDL_GetError());
         return false;
@@ -207,3 +207,4 @@ int Menu::GetHeight() const
 {
     return mHeight;
 }
+

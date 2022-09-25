@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include <utility>
 
 Game::Game(const GameConfiguration* config)
 :
@@ -33,9 +34,9 @@ bool Game::Initialize()
         return false;
     }
 
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    mRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
-    if (!renderer)
+    if (!mRenderer)
     {
         SDL_Log("Unable to create a renderer! Error was: %s", SDL_GetError());
         return false;
@@ -43,16 +44,16 @@ bool Game::Initialize()
 
     TTF_Init();
 
-    for(int x = 2; x < mMapWidth - 2; x++)
+    for (int x = 2; x < mMapWidth - 2; x++)
     {
-        for(int y = 0; y < mMapHeight - 2; y++)
+        for (int y = 0; y < mMapHeight - 2; y++)
         {
             mGameMap[x][y].Type = EMPTY;
         }
     }
 
     mFont = TTF_OpenFont("../Assets/PressStart2P-Regular.ttf", 24);
-    if(!mFont)
+    if (!mFont)
     {
         SDL_Log("Failed to open font\n");
         return false;
@@ -61,15 +62,19 @@ bool Game::Initialize()
     std::ifstream wordFile;
     std::string line;
 
-    wordFile.open("../Assets/WordList.txt");
-    if(!wordFile.is_open())
+    wordFile.open(mConfiguration->wordListFile);
+    if (!wordFile.is_open())
     {
         SDL_Log("Failed to open word list file");
         return false;
     }
 
-    while(std::getline(wordFile,line))
+    while (std::getline(wordFile, line))
     {
+        // Make sure these are not getting in
+        std::erase(line, '\r');
+        std::erase(line, '\n');
+
         mWordList.push_back(line);
     }
 
@@ -88,7 +93,7 @@ void Game::Run()
 
 void Game::Shutdown()
 {
-    SDL_DestroyRenderer(renderer);
+    SDL_DestroyRenderer(mRenderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
 }
@@ -104,7 +109,7 @@ void Game::ProcessInput()
                 isRunning = false;
                 break;
             case SDL_KEYDOWN:
-                switch(event.key.keysym.sym)
+                switch (event.key.keysym.sym)
                 {
                     case SDLK_a:
                     case SDLK_LEFT:
@@ -125,16 +130,16 @@ void Game::ProcessInput()
                         hideInfo = !hideInfo;
                         break;
                     case SDLK_SPACE:
-                        for(int i = 0; i < mMapHeight - 2; i++)
+                        for (int i = 0; i < mMapHeight - 2; i++)
                         {
-                            if(!UpdatePosition(0, 1))
+                            if (!UpdatePosition(0, 1))
                                 break;
                         }
                         UpdateBlocks();
                         break;
                     case SDLK_RETURN:
                         InsertBlock();
-                        if(gameRestarted)
+                        if (gameRestarted)
                             gameRestarted = false;
                         hideInfo = true;
                         break;
@@ -149,71 +154,81 @@ void Game::ProcessInput()
     {
         isRunning = false;
     }
-
-
 }
 
 void Game::UpdateGame()
 {
-    while (!SDL_TICKS_PASSED(SDL_GetTicks(), ticksCount + 16));
+    while (!SDL_TICKS_PASSED(SDL_GetTicks(), ticksCount + 16))
+        continue;
 
     float deltaTime = (SDL_GetTicks() - ticksCount) / 1000.0f;
 
     // Clamp maximum delta value
-    if(deltaTime > 0.05f) deltaTime = 0.05f;
+    if (deltaTime > 0.05f)
+        deltaTime = 0.05f;
 
     currentTime = ticksCount = SDL_GetTicks();
 
-    if(currentTime > lastTime + mDropSpeed)
+    if (currentTime > lastTime + mDropSpeed)
     {
         UpdateBlocks();
         lastTime = currentTime;
     }
 }
 
-void Game::GenerateOutput()
+void Game::GenerateOutput() const
 {
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_SetRenderDrawColor(mRenderer, 0, 0, 0, 255);
+    SDL_RenderClear(mRenderer);
+    SDL_SetRenderDrawColor(mRenderer, 255, 255, 255, 255);
 
-    for(int x = 0; x < mMapWidth; x++)
+    DrawDebugStuff();
+
+    for (int x = 0; x < mMapWidth; x++)
     {
-        for(int y = 0; y < mMapHeight; y++)
+        for (int y = 0; y < mMapHeight; y++)
         {
             const auto& block = mGameMap[x][y];
-            if(block.Type == WALL || block.Type == MOVING || block.Type == DROPPED)
+            if (block.Type == WALL || block.Type == MOVING || block.Type == DROPPED)
             {
                 SDL_Rect mapRect;
-                mapRect.x = 100 + x * (mBlockSize + mBlockGap);
-                mapRect.y = 100 + y * (mBlockSize + mBlockGap);
+                mapRect.x = (mBlockSize * 6) + x * (mBlockSize + mBlockGap);
+                mapRect.y = (mBlockSize * 6) + y * (mBlockSize + mBlockGap);
                 mapRect.h = mBlockSize;
                 mapRect.w = mBlockSize;
 
-                SDL_SetRenderDrawColor(renderer, block.Color.r, block.Color.g,
-                        block.Color.b, block.Color.a);
-                SDL_RenderFillRect(renderer, &mapRect);
+                SDL_SetRenderDrawColor(mRenderer, block.Color.r, block.Color.g, block.Color.b, block.Color.a);
+                SDL_RenderFillRect(mRenderer, &mapRect);
                 RenderText(std::string(1, block.Character), mapRect.x, mapRect.y, mapRect.w, mapRect.h);
             }
         }
     }
-    if(!hideInfo)
+
+    DrawWordList();
+
+    if (!hideInfo)
     {
-        RenderText("Use wasd or arrow keys for movement", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 2) ,
-                mConfiguration->screenWidth / 3 + 120, mConfiguration->screenHeight / 16);
-        RenderText("Press p to pause game", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 3) ,
-                mConfiguration->screenWidth / 3 + 20, mConfiguration->screenHeight / 16);
-        RenderText("Press enter to start game", mConfiguration->screenWidth / 2 + 40, mConfiguration->screenHeight - (mConfiguration->screenHeight / 4) ,
-                mConfiguration->screenWidth / 3 + 20, mConfiguration->screenHeight / 16);
+        RenderText("Use wasd or arrow keys for movement",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
+        RenderText("Press p to pause game",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize * 6,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
+        RenderText("Press enter to start game",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize * 12,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
     }
 
-    ScoreText = "SCORE: " + std::to_string(mScore);
-    LevelText = "Level: " + std::to_string(mLevel);
-    LinesText = "Words: " + std::to_string(mWordCount);
-    RenderText(ScoreText.c_str(), mConfiguration->screenWidth / 2 + 40, 100 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
-    RenderText(LinesText.c_str(), mConfiguration->screenWidth / 2 + 40, 200 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
-    RenderText(LevelText.c_str(), mConfiguration->screenWidth / 2 + 40, 300 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
-    SDL_RenderPresent(renderer);
+    std::string scoreText = "SCORE: " + std::to_string(mScore);
+    RenderText(scoreText.c_str(), mConfiguration->screenWidth / 2 + mBlockSize, 100 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
+
+    SDL_RenderPresent(mRenderer);
 }
 
 void Game::RestartGame()
@@ -228,7 +243,7 @@ void Game::RestartGame()
 
 void Game::InsertBlock()
 {
-    if(isBlock || gameStopped || gameRestarted)
+    if (isBlock || gameStopped || gameRestarted)
         return;
 
     SDL_Color blockColor = {25, 25, 255, 255};
@@ -244,36 +259,36 @@ void Game::InsertBlock()
 
 void Game::UpdateBlocks()
 {
-    if(mBlock == nullptr || gameStopped || gameRestarted)
+    if (mBlock == nullptr || gameStopped || gameRestarted)
         return;
 
     std::vector<Vector2> wordPositions;
-    for(int y = 0; y < mMapHeight - 2; y++)
+    for (int y = 0; y < mMapHeight - 2; y++)
     {
-        for(int x = 2; x < mMapWidth - 2; x++)
+        for (int x = 2; x < mMapWidth - 2; x++)
         {
-            if(mGameMap[x][y].Type == DROPPED && mGameMap[x][y + 1].Type == EMPTY)
+            if (mGameMap[x][y].Type == DROPPED && mGameMap[x][y + 1].Type == EMPTY)
             {
                 std::swap(mGameMap[x][y + 1], mGameMap[x][y]);
                 return;
             }
-            if(mGameMap[x][2].Type == DROPPED)
+            if (mGameMap[x][2].Type == DROPPED)
             {
                 RestartGame();
                 return;
             }
-            if(mGameMap[x][y].Type != DROPPED)
+            if (mGameMap[x][y].Type != DROPPED)
             {
                 mGameMap[x][y].Type = EMPTY;
             }
             wordPositions = CheckForWords(x, y);
-            if(!wordPositions.empty())
+            if (!wordPositions.empty())
                 break;
         }
-        if(!wordPositions.empty())
+        if (!wordPositions.empty())
         {
             AddScore(wordPositions.size());
-            for(const auto& wordPosition : wordPositions)
+            for (const auto& wordPosition : wordPositions)
             {
                 mGameMap[wordPosition.x][wordPosition.y].Type = EMPTY;
                 mGameMap[wordPosition.x][wordPosition.y].Character = 0;
@@ -288,7 +303,7 @@ void Game::UpdateBlocks()
 
 bool Game::UpdatePosition(int x, int y)
 {
-    if(mBlock == nullptr || gameStopped || gameRestarted)
+    if (mBlock == nullptr || gameStopped || gameRestarted)
         return false;
 
     if (mBlock->Type == MOVING)
@@ -296,9 +311,9 @@ bool Game::UpdatePosition(int x, int y)
         int xpos = mBlock->Position.x + x;
         int ypos = mBlock->Position.y + y;
 
-        if(mGameMap[xpos][ypos].Type == WALL || mGameMap[xpos][ypos].Type == DROPPED)
+        if (mGameMap[xpos][ypos].Type == WALL || mGameMap[xpos][ypos].Type == DROPPED)
         {
-            if(y > 0)
+            if (y > 0)
             {
                 ApplyBlockToMap(DROPPED);
                 mBlock = nullptr;
@@ -325,28 +340,28 @@ void Game::ApplyBlockToMap(BlockType valueToApply)
     }
 }
 
-void Game::RenderText(std::string_view text, int x, int y, int w, int h)
+void Game::RenderText(std::string_view text, int x, int y, int w, int h) const
 {
-    SDL_Surface* scoreMessage = TTF_RenderText_Solid(mFont, text.data(), {255,255,255,255});
-    SDL_Texture* scoreTexture = SDL_CreateTextureFromSurface(renderer, scoreMessage);
+    SDL_Surface* textSurface = TTF_RenderText_Solid(mFont, text.data(), {255, 255, 255, 255});
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(mRenderer, textSurface);
 
-    SDL_Rect messageRect;
-    messageRect.x = x;
-    messageRect.y = y;
-    messageRect.w = w;
-    messageRect.h = h;
+    SDL_Rect textRect;
+    textRect.x = x;
+    textRect.y = y;
+    textRect.w = w;
+    textRect.h = h;
 
-    SDL_RenderCopy(renderer, scoreTexture, nullptr, &messageRect);
+    SDL_RenderCopy(mRenderer, textTexture, nullptr, &textRect);
 
-    SDL_FreeSurface(scoreMessage);
-    SDL_DestroyTexture(scoreTexture);
+    SDL_FreeSurface(textSurface);
+    SDL_DestroyTexture(textTexture);
 }
 
 void Game::EmptyMap()
 {
-    for(int y = 0; y < mMapHeight - 2; y++)
+    for (int y = 0; y < mMapHeight - 2; y++)
     {
-        for(int x = 2; x < mMapWidth - 2; x++)
+        for (int x = 2; x < mMapWidth - 2; x++)
         {
             mGameMap[x][y].Type = EMPTY;
         }
@@ -358,7 +373,7 @@ void Game::AddScore(int wordLength)
     mScore += 10 * mLevel * wordLength;
     mWordCount++;
 
-    if(mWordCount % 10 == 0)
+    if (mWordCount % 10 == 0)
     {
         mLevel++;
         mDropSpeed -= 10;
@@ -370,40 +385,40 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
     std::vector<Vector2> wordPositions;
 
     std::string word;
-    for(int xpos = x; xpos < mMapWidth - 2; xpos++)
+    for (int xpos = x; xpos < mMapWidth - 2; xpos++)
     {
         const auto& block = mGameMap[xpos][y];
 
-        if(block.Type != DROPPED)
+        if (block.Type != DROPPED)
             break;
 
         word.push_back(block.Character);
         wordPositions.emplace_back(Vector2{xpos, y});
-        if(std::binary_search(mWordList.begin(), mWordList.end(), word))
+        if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            SDL_Log("1 %s\n", word.c_str());
-            for(auto wordpos : wordPositions)
-            {
-                SDL_Log("X: %d, Y: %d\n", wordpos.x, wordpos.y);
-            }
+            mWordsFound.push_back(word);
+            if(mWordsFound.size() > 8)
+                mWordsFound.pop_front();
             return wordPositions;
         }
     }
 
     wordPositions.clear();
     word.clear();
-    for(int ypos = y; ypos < mMapHeight - 2; ypos++)
+    for (int ypos = y; ypos < mMapHeight - 2; ypos++)
     {
         const auto& block = mGameMap[x][ypos];
 
-        if(block.Type == EMPTY || block.Type == WALL)
+        if (block.Type == EMPTY || block.Type == WALL)
             break;
 
         word.push_back(block.Character);
         wordPositions.emplace_back(Vector2{x, ypos});
-        if(std::binary_search(mWordList.begin(), mWordList.end(), word))
+        if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            SDL_Log("2 %s\n", word.c_str());
+            mWordsFound.push_back(word);
+            if(mWordsFound.size() > 8)
+                mWordsFound.pop_front();
             return wordPositions;
         }
     }
@@ -414,4 +429,45 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
 char Game::GetRandomCharacter()
 {
     return mConfiguration->blockCharset[characterDistribution(mRandomNumberGenerator)];
+}
+
+void Game::DrawWordList() const
+{
+    SDL_Rect wordBox;
+    wordBox.x = mConfiguration->screenWidth / 2 + (mBlockSize * 2);
+    wordBox.y = mBlockSize * 12;
+    wordBox.w = mBlockSize * 12;
+    wordBox.h = mBlockSize * 12;
+    SDL_SetRenderDrawColor(mRenderer, 255, 0, 0, 255);
+    SDL_RenderDrawRect(mRenderer, &wordBox);
+    RenderText("Words found: " + std::to_string(mWordsFound.size()), wordBox.x, wordBox.y - 30, wordBox.w, 20);
+
+    int wordY = wordBox.y;
+    int characterSize = wordBox.w / mConfiguration->maxWordLength;
+    int padding = 2;
+    for(const auto &word : mWordsFound)
+    {
+        const auto &wordLength = word.length();
+        RenderText(word, wordBox.x + padding, wordY + padding, wordLength * characterSize, wordBox.h / 8 - padding);
+        wordY += wordBox.h / 8;
+    }
+}
+
+void Game::DrawDebugStuff() const
+{
+    if(!mConfiguration->debug)
+        return;
+
+    SDL_SetRenderDrawColor(mRenderer, 255, 0, 0, 255);
+    for(int x = 0; x < mConfiguration->screenWidth; x += mBlockSize)
+    {
+        if(x > mConfiguration->screenWidth / 2)
+            SDL_SetRenderDrawColor(mRenderer, 120, 0, 0, 255);
+
+        SDL_RenderDrawLine(mRenderer, x, 0, x, mConfiguration->screenHeight);
+        for(int y = 0; y < mConfiguration->screenHeight; y += mBlockSize)
+        {
+            SDL_RenderDrawLine(mRenderer, 0, y, mConfiguration->screenWidth, y);
+        }
+    }
 }

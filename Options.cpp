@@ -8,8 +8,10 @@ mParentMenu(parentMenu)
     mGameConfiguration.screenWidth = 1024;
     mGameConfiguration.screenHeight = 768;
     mGameConfiguration.fullscreen = false;
+    mGameConfiguration.debug = false;
     mGameConfiguration.title = "JWordTetris";
     mGameConfiguration.blockCharset = "AABCDEEFGHIIJKLMNOOPQRSTUUVWXYZ"; // More vowels for easier game
+    mGameConfiguration.wordListFile = "../Assets/WordListBig.txt";
 
     comboItems[0] = "800x600";
     comboItems[1] = "1024x768";
@@ -50,6 +52,8 @@ void Options::Draw()
         }
         ImGui::EndListBox();
     }
+
+    ImGui::Checkbox("Debug", &mGameConfiguration.debug);
 
     if (ImGui::Button("Exit Options", ImVec2(parentWidth  / 4.0, 50)))
         isShowed = false;
@@ -101,3 +105,4 @@ const GameConfiguration& Options::GetGameConfiguration()
     }
     return mGameConfiguration;
 }
+

@@ -23,3 +23,4 @@ struct Block
     Vector2 Position;
     char Character;
 };
+

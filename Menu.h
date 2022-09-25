@@ -5,6 +5,8 @@
 #include <SDL2/SDL_ttf.h>
 #include <string>
 #include <vector>
+#include <memory>
+
 #include "Game.h"
 
 #include "ImGui/imgui.h"
@@ -19,7 +21,7 @@ class Options;
 
 class Menu
 {
-public:
+ public:
     Menu();
     ~Menu();
 
@@ -29,7 +31,7 @@ public:
 
     int GetWidth() const;
     int GetHeight() const;
-private:
+ private:
     void ProcessInput();
     void GenerateOutput();
     bool LoadMenu();
@@ -58,3 +60,4 @@ private:
 
     std::unique_ptr<Options> mOptions;
 };
+

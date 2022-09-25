@@ -6,7 +6,9 @@ struct GameConfiguration
 {
     int screenWidth;
     int screenHeight;
+    int maxWordLength {15};
     bool fullscreen;
+    bool debug;
     std::string title;
     std::string blockCharset;
     std::string wordListFile;
@@ -42,3 +44,4 @@ class Options
 
     GameConfiguration mGameConfiguration;
 };
+
