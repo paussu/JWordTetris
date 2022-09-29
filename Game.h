@@ -14,6 +14,11 @@
 #include "Block.h"
 
 struct GameConfiguration;
+struct WordScore
+{
+   std::string word;
+   int score;
+};
 
 class Game
 {
@@ -39,7 +44,9 @@ class Game
     bool UpdatePosition(int x, int y);
     std::vector<Vector2> CheckForWords(int x, int y);
     void RenderText(std::string_view text, int x, int y, int w, int h) const;
+    void DrawMap() const;
     void DrawWordList() const;
+    void DrawKeyboardInfo() const;
 
     void DrawDebugStuff() const;
 
@@ -52,7 +59,7 @@ class Game
     bool isBlock {false};
     bool gameRestarted {false};
     bool gameStopped {false};
-    bool hideInfo {false};
+    bool hideKeyboardInfo {false};
 
     const int mMapWidth {20};
     const int mMapHeight {30};
@@ -79,6 +86,6 @@ class Game
     std::vector<std::vector<Block>> mGameMap;
     std::unique_ptr<Block> mBlock;
 
-    std::deque<std::string> mWordsFound;
+    std::deque<WordScore> mWordsFound;
 };
 

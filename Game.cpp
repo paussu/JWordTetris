@@ -127,7 +127,7 @@ void Game::ProcessInput()
                         gameStopped = !gameStopped;
                         break;
                     case SDLK_h:
-                        hideInfo = !hideInfo;
+                        hideKeyboardInfo = !hideKeyboardInfo;
                         break;
                     case SDLK_SPACE:
                         for (int i = 0; i < mMapHeight - 2; i++)
@@ -141,7 +141,7 @@ void Game::ProcessInput()
                         InsertBlock();
                         if (gameRestarted)
                             gameRestarted = false;
-                        hideInfo = true;
+                        hideKeyboardInfo = true;
                         break;
                 }
                 break;
@@ -183,47 +183,9 @@ void Game::GenerateOutput() const
     SDL_SetRenderDrawColor(mRenderer, 255, 255, 255, 255);
 
     DrawDebugStuff();
-
-    for (int x = 0; x < mMapWidth; x++)
-    {
-        for (int y = 0; y < mMapHeight; y++)
-        {
-            const auto& block = mGameMap[x][y];
-            if (block.Type == WALL || block.Type == MOVING || block.Type == DROPPED)
-            {
-                SDL_Rect mapRect;
-                mapRect.x = (mBlockSize * 6) + x * (mBlockSize + mBlockGap);
-                mapRect.y = (mBlockSize * 6) + y * (mBlockSize + mBlockGap);
-                mapRect.h = mBlockSize;
-                mapRect.w = mBlockSize;
-
-                SDL_SetRenderDrawColor(mRenderer, block.Color.r, block.Color.g, block.Color.b, block.Color.a);
-                SDL_RenderFillRect(mRenderer, &mapRect);
-                RenderText(std::string(1, block.Character), mapRect.x, mapRect.y, mapRect.w, mapRect.h);
-            }
-        }
-    }
-
+    DrawMap();
     DrawWordList();
-
-    if (!hideInfo)
-    {
-        RenderText("Use wasd or arrow keys for movement",
-            mConfiguration->screenWidth / 2 + mBlockSize,
-            mConfiguration->screenHeight / 2 + mBlockSize,
-            mConfiguration->screenWidth / 3,
-            mConfiguration->screenHeight / 16);
-        RenderText("Press p to pause game",
-            mConfiguration->screenWidth / 2 + mBlockSize,
-            mConfiguration->screenHeight / 2 + mBlockSize * 6,
-            mConfiguration->screenWidth / 3,
-            mConfiguration->screenHeight / 16);
-        RenderText("Press enter to start game",
-            mConfiguration->screenWidth / 2 + mBlockSize,
-            mConfiguration->screenHeight / 2 + mBlockSize * 12,
-            mConfiguration->screenWidth / 3,
-            mConfiguration->screenHeight / 16);
-    }
+    DrawKeyboardInfo();
 
     std::string scoreText = "SCORE: " + std::to_string(mScore);
     RenderText(scoreText.c_str(), mConfiguration->screenWidth / 2 + mBlockSize, 100 , mConfiguration->screenWidth / 4, mConfiguration->screenHeight / 20);
@@ -263,9 +225,9 @@ void Game::UpdateBlocks()
         return;
 
     std::vector<Vector2> wordPositions;
-    for (int y = 0; y < mMapHeight - 2; y++)
+    for (int y = 0; y < mMapHeight - 1; y++)
     {
-        for (int x = 2; x < mMapWidth - 2; x++)
+        for (int x = 1; x < mMapWidth - 1; x++)
         {
             if (mGameMap[x][y].Type == DROPPED && mGameMap[x][y + 1].Type == EMPTY)
             {
@@ -359,9 +321,9 @@ void Game::RenderText(std::string_view text, int x, int y, int w, int h) const
 
 void Game::EmptyMap()
 {
-    for (int y = 0; y < mMapHeight - 2; y++)
+    for (int y = 0; y < mMapHeight - 1; y++)
     {
-        for (int x = 2; x < mMapWidth - 2; x++)
+        for (int x = 1; x < mMapWidth - 1; x++)
         {
             mGameMap[x][y].Type = EMPTY;
         }
@@ -385,7 +347,7 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
     std::vector<Vector2> wordPositions;
 
     std::string word;
-    for (int xpos = x; xpos < mMapWidth - 2; xpos++)
+    for (int xpos = x; xpos < mMapWidth - 1; xpos++)
     {
         const auto& block = mGameMap[xpos][y];
 
@@ -396,7 +358,10 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
         wordPositions.emplace_back(Vector2{xpos, y});
         if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            mWordsFound.push_back(word);
+            WordScore score;
+            score.word = word;
+            score.score = word.length() * 10;
+            mWordsFound.push_back(score);
             if(mWordsFound.size() > 8)
                 mWordsFound.pop_front();
             return wordPositions;
@@ -405,7 +370,7 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
 
     wordPositions.clear();
     word.clear();
-    for (int ypos = y; ypos < mMapHeight - 2; ypos++)
+    for (int ypos = y; ypos < mMapHeight - 1; ypos++)
     {
         const auto& block = mGameMap[x][ypos];
 
@@ -416,7 +381,10 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
         wordPositions.emplace_back(Vector2{x, ypos});
         if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            mWordsFound.push_back(word);
+            WordScore score;
+            score.word = word;
+            score.score = word.length() * 10;
+            mWordsFound.push_back(score);
             if(mWordsFound.size() > 8)
                 mWordsFound.pop_front();
             return wordPositions;
@@ -429,6 +397,38 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
 char Game::GetRandomCharacter()
 {
     return mConfiguration->blockCharset[characterDistribution(mRandomNumberGenerator)];
+}
+
+void Game::DrawMap() const
+{
+    const int xOffset = mBlockSize * 6;
+    const int yOffset = mBlockSize * 6;
+    // Left vertical line
+    SDL_RenderDrawLine(mRenderer, xOffset + mBlockSize, yOffset, xOffset + mBlockSize, yOffset + mMapHeight * mBlockSize + mBlockSize);
+    // Right vertical line
+    SDL_RenderDrawLine(mRenderer, xOffset + (mBlockSize * mMapWidth), yOffset, xOffset + (mBlockSize * mMapWidth), yOffset + mMapHeight * mBlockSize + mBlockSize);
+    // Horizontal line
+    SDL_RenderDrawLine(mRenderer, xOffset + mBlockSize, yOffset + (mBlockSize * mMapHeight) + mBlockSize, xOffset + (mBlockSize * mMapWidth), yOffset + (mBlockSize * mMapHeight) + mBlockSize);
+
+    for (int x = 0; x < mMapWidth; x++)
+    {
+        for (int y = 0; y < mMapHeight; y++)
+        {
+            const auto& block = mGameMap[x][y];
+            if (block.Type == MOVING || block.Type == DROPPED)
+            {
+                SDL_Rect mapRect;
+                mapRect.x = xOffset + x * (mBlockSize + mBlockGap);
+                mapRect.y = yOffset + y * (mBlockSize + mBlockGap);
+                mapRect.h = mBlockSize;
+                mapRect.w = mBlockSize;
+
+                SDL_SetRenderDrawColor(mRenderer, block.Color.r, block.Color.g, block.Color.b, block.Color.a);
+                SDL_RenderFillRect(mRenderer, &mapRect);
+                RenderText(std::string(1, block.Character), mapRect.x, mapRect.y, mapRect.w, mapRect.h);
+            }
+        }
+    }
 }
 
 void Game::DrawWordList() const
@@ -445,11 +445,38 @@ void Game::DrawWordList() const
     int wordY = wordBox.y;
     int characterSize = wordBox.w / mConfiguration->maxWordLength;
     int padding = 2;
-    for(const auto &word : mWordsFound)
+    for(const auto &wordScore : mWordsFound)
     {
-        const auto &wordLength = word.length();
-        RenderText(word, wordBox.x + padding, wordY + padding, wordLength * characterSize, wordBox.h / 8 - padding);
+        // TODO: Format with something nicer
+        char buffer [32];
+        const auto scoreText = std::to_string(wordScore.score);
+        sprintf(buffer, "%s%*s%s", wordScore.word.c_str(), static_cast<int>(mConfiguration->maxWordLength - wordScore.word.length() - scoreText.length() + 1) ,"",  scoreText.c_str());
+        std::string wordScoreText(buffer);
+        const auto &wordLength = wordScoreText.length();
+        RenderText(wordScoreText, wordBox.x + padding, wordY + padding, wordLength * characterSize, wordBox.h / 8 - padding);
         wordY += wordBox.h / 8;
+    }
+}
+
+void Game::DrawKeyboardInfo() const
+{
+    if (!hideKeyboardInfo)
+    {
+        RenderText("Use wasd or arrow keys for movement",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
+        RenderText("Press p to pause game",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize * 6,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
+        RenderText("Press enter to start game",
+            mConfiguration->screenWidth / 2 + mBlockSize,
+            mConfiguration->screenHeight / 2 + mBlockSize * 12,
+            mConfiguration->screenWidth / 3,
+            mConfiguration->screenHeight / 16);
     }
 }
 
