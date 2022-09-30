@@ -2,6 +2,7 @@
 #include "Menu.h"
 #include "Game.h"
 #include "Options.h"
+#include "Hiscores.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
@@ -12,6 +13,7 @@
 Menu::Menu()
 {
     clearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    mHiscores = std::make_unique<Hiscores>(this);
     mOptions = std::make_unique<Options>(this);
 }
 
@@ -19,9 +21,6 @@ Menu::~Menu() = default;
 
 bool Menu::Initialize()
 {
-    mWidth = 1024;
-    mHeight = 768;
-
     if(!LoadMenu())
         return false;
 
@@ -57,17 +56,11 @@ void Menu::RunLoop()
         if (mGameStart)
         {
             UnloadMenu();
-            auto game = std::make_unique<Game>(&mOptions->GetGameConfiguration());
-            bool success = game->Initialize();
 
-            if (success)
-            {
-                game->Run();
-            }
+            RunGame();
 
-            game->Shutdown();
-            mGameStart = false;
             LoadMenu();
+            GameOverScreen();
         }
 
         GenerateOutput();
@@ -167,6 +160,7 @@ void Menu::GenerateOutput()
     ImGui::NewFrame();
 
     DrawMenu();
+    mHiscores->Draw();
     mOptions->Draw();
 
     // Rendering
@@ -190,7 +184,7 @@ void Menu::DrawMenu()
         mOptions->SetShown();
 
     if (ImGui::Button("Hiscores", ImVec2(mWidth  / 4.0, 100)))
-        auto todo = true;
+        mHiscores->SetShown();
 
     if (ImGui::Button("Exit", ImVec2(mWidth  / 4.0, 100)))
         mIsRunning = false;
@@ -208,3 +202,71 @@ int Menu::GetHeight() const
     return mHeight;
 }
 
+void Menu::RunGame()
+{
+    auto game = std::make_unique<Game>(&mOptions->GetGameConfiguration());
+    bool success = game->Initialize();
+
+    if (success)
+    {
+        game->Run();
+        mScore = game->GetScore();
+    }
+    game->Shutdown();
+    mGameStart = false;
+}
+
+void Menu::GameOverScreen()
+{
+    char playerNameBuffer[64] = "";
+
+    std::string playerName;
+    while(playerName.empty())
+    {
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                mIsRunning = false;
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(mWindow))
+                mIsRunning = false;
+        }
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::SetNextWindowSize(ImVec2(200, 200), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(200, 100));
+        ImGui::Begin("Game over", NULL, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize);
+
+        ImGui::BeginChild("Score", ImVec2(300.0, 300.0));
+
+        ImGui::Text("Player name: ");
+
+        ImGui::InputText("##PlayerName", playerNameBuffer, IM_ARRAYSIZE(playerNameBuffer));
+
+        ImGui::EndChild();
+
+        if(ImGui::Button("Exit and save score", ImVec2(200, 50)))
+        {
+            playerName = playerNameBuffer;
+            if(playerName.empty())
+                playerName = "Unnamed Player";
+        }
+
+        ImGui::End();
+
+        // Rendering
+        ImGui::Render();
+        glClearColor(clearColor.x * clearColor.w, clearColor.y * clearColor.w, clearColor.z * clearColor.w, clearColor.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(mWindow);
+    }
+
+    mHiscores->SaveScore(playerName, mScore);
+}

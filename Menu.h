@@ -17,6 +17,7 @@ struct ResolutionChoice
     int w, h;
 };
 
+class Hiscores;
 class Options;
 
 class Menu
@@ -34,9 +35,11 @@ class Menu
  private:
     void ProcessInput();
     void GenerateOutput();
+    void RunGame();
     bool LoadMenu();
     void UnloadMenu();
     void DrawMenu();
+    void GameOverScreen();
 
     SDL_Window* mWindow;
     SDL_Renderer* mRenderer;
@@ -45,9 +48,10 @@ class Menu
     bool mIsRunning;
     bool mGameStart = false;
 
-    Uint32 mTicksCount;
-    int mWidth;
-    int mHeight;
+    Uint32 mTicksCount {0};
+    int mScore {0};
+    int mWidth {1024};
+    int mHeight {768};
 
     bool debug = true;
 
@@ -58,6 +62,7 @@ class Menu
     int i, selected_resolution;
     std::vector<ResolutionChoice> resolutions;
 
+    std::unique_ptr<Hiscores> mHiscores;
     std::unique_ptr<Options> mOptions;
 };
 

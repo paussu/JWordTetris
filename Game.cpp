@@ -139,8 +139,6 @@ void Game::ProcessInput()
                         break;
                     case SDLK_RETURN:
                         InsertBlock();
-                        if (gameRestarted)
-                            gameRestarted = false;
                         hideKeyboardInfo = true;
                         break;
                 }
@@ -193,19 +191,9 @@ void Game::GenerateOutput() const
     SDL_RenderPresent(mRenderer);
 }
 
-void Game::RestartGame()
-{
-    mScore = mWordCount = 0;
-    mLevel = 1;
-    gameRestarted = true;
-    EmptyMap();
-    mBlock = nullptr;
-    isBlock = false;
-}
-
 void Game::InsertBlock()
 {
-    if (isBlock || gameStopped || gameRestarted)
+    if (isBlock || gameStopped)
         return;
 
     SDL_Color blockColor = {25, 25, 255, 255};
@@ -221,7 +209,7 @@ void Game::InsertBlock()
 
 void Game::UpdateBlocks()
 {
-    if (mBlock == nullptr || gameStopped || gameRestarted)
+    if (mBlock == nullptr || gameStopped)
         return;
 
     std::vector<Vector2> wordPositions;
@@ -236,7 +224,7 @@ void Game::UpdateBlocks()
             }
             if (mGameMap[x][2].Type == DROPPED)
             {
-                RestartGame();
+                isRunning = false;
                 return;
             }
             if (mGameMap[x][y].Type != DROPPED)
@@ -265,7 +253,7 @@ void Game::UpdateBlocks()
 
 bool Game::UpdatePosition(int x, int y)
 {
-    if (mBlock == nullptr || gameStopped || gameRestarted)
+    if (mBlock == nullptr || gameStopped)
         return false;
 
     if (mBlock->Type == MOVING)
@@ -358,10 +346,8 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
         wordPositions.emplace_back(Vector2{xpos, y});
         if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            WordScore score;
-            score.word = word;
-            score.score = word.length() * 10;
-            mWordsFound.push_back(score);
+            int score = word.length() * 10;
+            mWordsFound.emplace_back(word, score);
             if(mWordsFound.size() > 8)
                 mWordsFound.pop_front();
             return wordPositions;
@@ -381,10 +367,8 @@ std::vector<Vector2> Game::CheckForWords(int x, int y)
         wordPositions.emplace_back(Vector2{x, ypos});
         if (std::binary_search(mWordList.begin(), mWordList.end(), word))
         {
-            WordScore score;
-            score.word = word;
-            score.score = word.length() * 10;
-            mWordsFound.push_back(score);
+            int score = word.length() * 10;
+            mWordsFound.emplace_back(word, score);
             if(mWordsFound.size() > 8)
                 mWordsFound.pop_front();
             return wordPositions;
@@ -445,12 +429,12 @@ void Game::DrawWordList() const
     int wordY = wordBox.y;
     int characterSize = wordBox.w / mConfiguration->maxWordLength;
     int padding = 2;
-    for(const auto &wordScore : mWordsFound)
+    for(const auto &[word, score] : mWordsFound)
     {
         // TODO: Format with something nicer
         char buffer [32];
-        const auto scoreText = std::to_string(wordScore.score);
-        sprintf(buffer, "%s%*s%s", wordScore.word.c_str(), static_cast<int>(mConfiguration->maxWordLength - wordScore.word.length() - scoreText.length() + 1) ,"",  scoreText.c_str());
+        const auto scoreText = std::to_string(score);
+        sprintf(buffer, "%s%*s%s", word.c_str(), static_cast<int>(mConfiguration->maxWordLength - word.length() - scoreText.length() + 1) ,"",  scoreText.c_str());
         std::string wordScoreText(buffer);
         const auto &wordLength = wordScoreText.length();
         RenderText(wordScoreText, wordBox.x + padding, wordY + padding, wordLength * characterSize, wordBox.h / 8 - padding);
@@ -497,4 +481,9 @@ void Game::DrawDebugStuff() const
             SDL_RenderDrawLine(mRenderer, 0, y, mConfiguration->screenWidth, y);
         }
     }
+}
+
+int Game::GetScore()
+{
+    return mScore;
 }

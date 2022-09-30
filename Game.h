@@ -14,11 +14,6 @@
 #include "Block.h"
 
 struct GameConfiguration;
-struct WordScore
-{
-   std::string word;
-   int score;
-};
 
 class Game
 {
@@ -29,11 +24,13 @@ class Game
     void Run();
     void Shutdown();
 
+    int GetScore();
+    std::string GetPlayerName();
+
  private:
     void ProcessInput();
     void UpdateGame();
     void GenerateOutput() const;
-    void RestartGame();
 
     void AddScore(int wordLength);
     void InsertBlock();
@@ -57,7 +54,6 @@ class Game
 
     bool isRunning {true};
     bool isBlock {false};
-    bool gameRestarted {false};
     bool gameStopped {false};
     bool hideKeyboardInfo {false};
 
@@ -86,6 +82,6 @@ class Game
     std::vector<std::vector<Block>> mGameMap;
     std::unique_ptr<Block> mBlock;
 
-    std::deque<WordScore> mWordsFound;
+    std::deque<std::pair<std::string, int>> mWordsFound;
 };
 

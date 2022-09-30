@@ -37,3 +37,5 @@ build/
 .ccls
 CPPLINT.cfg
 tags
+
+Hiscores.score
